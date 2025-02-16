@@ -124,7 +124,7 @@ La question doit être courte, positive, personnelle et faire référence aux so
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-8">
+      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-8">
         <div className="max-w-2xl mx-auto">
           <div className="animate-pulse">
             <div className="h-8 bg-gray-200 rounded w-3/4 mb-6"></div>
@@ -148,8 +148,10 @@ La question doit être courte, positive, personnelle et faire référence aux so
             href="/"
             className="inline-flex items-center text-gray-600 hover:text-gray-900"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Retour à la roue
+            <div className="flex items-center gap-2 mb-4">
+                <ArrowLeft className="w-5 h-5 text-blue-500" />
+                Retour à la roue
+              </div>
           </Link>
           <h1 className="text-2xl font-bold mt-4 text-gray-900">
             Questions sur {domain}
@@ -158,10 +160,7 @@ La question doit être courte, positive, personnelle et faire référence aux so
 
         <div className="space-y-8">
           {questions.map((item, index) => (
-            <div 
-              key={index}
-              className="bg-white rounded-lg shadow-sm p-6 transition-all space-y-4"
-            >
+            <div key={index} className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all p-8 space-y-6 border border-gray-100">
               <div className="border-b pb-4">
                 <h3 className="font-semibold text-gray-700 mb-2">Critère</h3>
                 <p className="text-gray-600">{item.criteria}</p>
@@ -182,9 +181,9 @@ La question doit être courte, positive, personnelle et faire référence aux so
                   ) : (
                     <>
                       {item.question && (
-                        <div className="mt-4">
-                          <h3 className="font-semibold text-gray-700 mb-2">Question</h3>
-                          <p className="text-gray-800 text-lg">{item.question}</p>
+                        <div className="mt-6 bg-blue-50 p-6 rounded-xl border border-blue-100">
+                          <h3 className="font-semibold text-blue-900 mb-3 text-lg">Question</h3>
+                          <p className="text-blue-800 text-xl leading-relaxed question-appear">{item.question}</p>
                         </div>
                       )}
                       
@@ -219,14 +218,14 @@ La question doit être courte, positive, personnelle et faire référence aux so
                         <button
                           key={rating}
                           onClick={() => handleRating(item.criteria, rating, index)}
-                          className={`p-1 rounded hover:bg-gray-100 transition-colors ${
-                            rating <= getResponse(item.criteria) ? 'text-yellow-500' : 'text-gray-400'
+                          className={`p-2 rounded-full hover:bg-yellow-50 transition-all ${
+                            rating <= getResponse(item.criteria) 
+                              ? 'text-yellow-400 [&>svg]:fill-yellow-400 scale-110' 
+                              : 'text-gray-300 hover:text-yellow-200'
                           }`}
                         >
                           <Star 
-                            className={`w-8 h-8 ${
-                              rating <= getResponse(item.criteria) ? 'fill-current' : ''
-                            }`}
+                            className="w-8 h-8"
                           />
                         </button>
                       ))}
