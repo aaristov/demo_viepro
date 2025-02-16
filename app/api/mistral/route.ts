@@ -66,10 +66,20 @@ Example format: "How satisfied are you with [aspect] on a scale of 1-5, where 1 
     const data = await response.json();
     return NextResponse.json(data);
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error calling Mistral API:', error);
+    
+    // Type guard to check if error is an Error object
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { error: 'Failed to generate response', details: error.message },
+        { status: 500 }
+      );
+    }
+    
+    // Fallback for non-Error objects
     return NextResponse.json(
-      { error: 'Failed to generate response', details: error.message },
+      { error: 'Failed to generate response', details: 'An unknown error occurred' },
       { status: 500 }
     );
   }

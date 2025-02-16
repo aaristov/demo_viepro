@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Star, ArrowLeft } from 'lucide-react';
 import { useSurveyStore } from '../store/survey';
@@ -12,10 +12,17 @@ interface Question {
   loading: boolean;
   prompt?: string;
   error?: string;
-  mistralResponse?: any;
+  mistralResponse?: {
+    choices: Array<{
+      message: {
+        content: string;
+      };
+    }>;
+  } | null;
+  origine_data?: string[];
 }
 
-export default function QuestionnairePage() {
+function QuestionnairePage() {
   const searchParams = useSearchParams();
   const domain = searchParams.get('domain');
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -50,17 +57,17 @@ export default function QuestionnairePage() {
       setQuestions(domainCriteria);
       setLoading(false);
 
-      // Generate questions for each criteria
-      domainCriteria.forEach((item, index) => {
-        generateQuestion(item.criteria, item.origine_data, index);
-      });
+      // Generate first question
+      if (domainCriteria.length > 0) {
+        generateQuestion(domainCriteria[0].criteria, domainCriteria[0].origine_data, 0);
+      }
     } catch (error) {
       console.error('Error processing criteria:', error);
       setLoading(false);
     }
   }, [domain]);
 
-  const generateQuestion = async (criteria: string, origineData: string[], index: number) => {
+  const generateQuestion = async (criteria: string, origineData: string[] = [], index: number) => {
     // Create the prompt with context from origine_data
     const prompt = `Crée une question amicale et engageante en français pour évaluer la satisfaction concernant le critère "${criteria}" sur une échelle de 1 à 5 (1 étant très insatisfait et 5 très satisfait). 
 
@@ -160,20 +167,13 @@ La question doit être courte, positive, personnelle et faire référence aux so
                 <p className="text-gray-600">{item.criteria}</p>
               </div>
 
-              {item.prompt && (
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-gray-700 mb-2">Prompt envoyé à Mistral</h3>
-                  <p className="text-gray-600 font-mono text-sm whitespace-pre-wrap">{item.prompt}</p>
-                </div>
-              )}
-
               {item.loading ? (
                 <div className="animate-pulse">
                   <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
                   <div className="h-4 bg-gray-200 rounded w-1/2"></div>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <>
                   {item.error ? (
                     <div className="bg-red-50 p-4 rounded-lg">
                       <h3 className="font-semibold text-red-700 mb-2">Erreur</h3>
@@ -181,36 +181,50 @@ La question doit être courte, positive, personnelle et faire référence aux so
                     </div>
                   ) : (
                     <>
-                      {item.mistralResponse && (
-                        <div className="bg-blue-50 p-4 rounded-lg">
-                          <h3 className="font-semibold text-blue-700 mb-2">Réponse de Mistral</h3>
-                          <pre className="text-blue-600 font-mono text-sm overflow-x-auto whitespace-pre-wrap">
-                            {JSON.stringify(item.mistralResponse, null, 2)}
-                          </pre>
+                      {item.question && (
+                        <div className="mt-4">
+                          <h3 className="font-semibold text-gray-700 mb-2">Question</h3>
+                          <p className="text-gray-800 text-lg">{item.question}</p>
                         </div>
                       )}
                       
-                      {item.question && (
-                        <div className="bg-green-50 p-4 rounded-lg">
-                          <h3 className="font-semibold text-green-700 mb-2">Question générée</h3>
-                          <p className="text-green-600">{item.question}</p>
-                        </div>
+                      {item.prompt && (
+                        <details className="mt-4 text-sm">
+                          <summary className="cursor-pointer flex items-center gap-1 font-medium text-gray-600 hover:text-gray-800">
+                            <span className="text-xs">▶</span>
+                            Détails techniques
+                          </summary>
+                          <div className="mt-4 space-y-4">
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                              <h3 className="font-semibold text-gray-700 mb-2">Prompt envoyé à Mistral</h3>
+                              <p className="text-gray-600 font-mono text-sm whitespace-pre-wrap">{item.prompt}</p>
+                            </div>
+                            {item.mistralResponse && (
+                              <div className="bg-gray-50 p-4 rounded-lg">
+                                <h3 className="font-semibold text-gray-700 mb-2">Réponse de Mistral</h3>
+                                <pre className="text-gray-600 font-mono text-sm overflow-x-auto whitespace-pre-wrap">
+                                  {JSON.stringify(item.mistralResponse, null, 2)}
+                                </pre>
+                              </div>
+                            )}
+                          </div>
+                        </details>
                       )}
                     </>
                   )}
 
-                  {!item.error && !item.loading && (
+                  {!item.error && !item.loading && item.question && (
                     <div className="flex gap-2 pt-4">
                       {[1, 2, 3, 4, 5].map((rating) => (
                         <button
                           key={rating}
                           onClick={() => handleRating(item.criteria, rating, index)}
-                          className={`p-1 rounded hover:bg-gray-100 transition-colors ${                            
+                          className={`p-1 rounded hover:bg-gray-100 transition-colors ${
                             rating <= getResponse(item.criteria) ? 'text-yellow-500' : 'text-gray-400'
                           }`}
                         >
                           <Star 
-                            className={`w-8 h-8 ${                              
+                            className={`w-8 h-8 ${
                               rating <= getResponse(item.criteria) ? 'fill-current' : ''
                             }`}
                           />
@@ -218,12 +232,34 @@ La question doit être courte, positive, personnelle et faire référence aux so
                       ))}
                     </div>
                   )}
-                </div>
+                </>
               )}
             </div>
           ))}
         </div>
       </div>
     </div>
+  );
+}
+
+export default function QuestionnaireWithSuspense() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 p-8">
+        <div className="max-w-2xl mx-auto">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-3/4 mb-6"></div>
+            {[1, 2, 3].map(i => (
+              <div key={i} className="mb-8">
+                <div className="h-6 bg-gray-200 rounded w-full mb-4"></div>
+                <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    }>
+      <QuestionnairePage />
+    </Suspense>
   );
 }

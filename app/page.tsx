@@ -1,9 +1,7 @@
-import Image from "next/image";
 import HealthWheel from "./components/wheel";
 
 export default function Home() {
-  return <>
-  <HealthWheel />
-  </>
-    
+  return (
+    <HealthWheel />
+  );
 }

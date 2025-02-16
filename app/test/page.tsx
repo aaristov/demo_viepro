@@ -21,7 +21,7 @@ export default function TestPage() {
         }
         
         setResponse(data.choices[0].message.content);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error:', err);
         setError(err.message);
         setResponse('Failed to get response');
@@ -36,7 +36,7 @@ export default function TestPage() {
       <h1 className="text-2xl font-bold mb-4">Mistral Test Page</h1>
       <div className="mb-4">
         <h2 className="font-semibold mb-2">Message sent:</h2>
-        <p className="bg-gray-100 p-3 rounded">"Hello"</p>
+        <p className="bg-gray-100 p-3 rounded">&ldquo;Hello&rdquo;</p>
       </div>
       <div>
         <h2 className="font-semibold mb-2">Response:</h2>

@@ -52,10 +52,16 @@ export async function POST(request: Request) {
     console.log('Response data:', data);
     return NextResponse.json(data);
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error in test route:', error);
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
     return NextResponse.json(
-      { error: error.message },
+      { error: 'An unknown error occurred' },
       { status: 500 }
     );
   }
@@ -104,10 +110,16 @@ export async function GET() {
     console.log('Response data:', data);
     return NextResponse.json(data);
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error in test route:', error);
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
     return NextResponse.json(
-      { error: error.message },
+      { error: 'An unknown error occurred' },
       { status: 500 }
     );
   }

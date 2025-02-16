@@ -3,16 +3,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Heart, ChevronDown, ChevronUp } from 'lucide-react';
-import type { NocoDBResponse, CriteriaItem } from '@/app/types/nocodb';
+import type { NocoDBResponse, Sector, DomainData } from '@/app/types/nocodb';
 
-interface Sector {
-  text: string;
-  color: string;
-  criteria: Array<{
-    criteres: string;
-    origine_data: string[];
-  }>;
-}
+const colorsList = [
+  "#FFB5E8", "#B5EAEA", "#97C1A9", "#FCB5AC", "#BDB2FF", "#FFE5B5",
+  "#FFC8A2", "#D4A5A5", "#9EE6CF", "#77DD77", "#B39EB5", "#FFB347"
+];
 
 const HealthWheel = () => {
   const router = useRouter();
@@ -26,11 +22,6 @@ const HealthWheel = () => {
   const [selectedSector, setSelectedSector] = useState<number | null>(null);
   const [expandedCriteria, setExpandedCriteria] = useState<string[]>([]);
   const wheelRef = useRef<HTMLDivElement>(null);
-
-  const colors = [
-    "#FFB5E8", "#B5EAEA", "#97C1A9", "#FCB5AC", "#BDB2FF", "#FFE5B5",
-    "#FFC8A2", "#D4A5A5", "#9EE6CF", "#77DD77", "#B39EB5", "#FFB347"
-  ];
   
   const fetchNocoDBData = async (): Promise<NocoDBResponse> => {
     try {
@@ -58,24 +49,29 @@ const HealthWheel = () => {
         const data = await fetchNocoDBData();
         
         // Group criteria and origin data by domain
-        const domainMap = data.list.reduce((acc, item) => {
+        const domainMap = data.list.reduce<DomainData>((acc, item) => {
+          // Create domain map if it doesn't exist
           if (!acc[item.domaines]) {
-            acc[item.domaines] = new Map();
+            acc[item.domaines] = new Map<string, Set<string>>();
           }
           
-          // Group origin data by criteria
-          if (!acc[item.domaines].has(item.criteres)) {
-            acc[item.domaines].set(item.criteres, new Set());
+          const currentDomain = acc[item.domaines];
+          if (!currentDomain.has(item.criteres)) {
+            currentDomain.set(item.criteres, new Set<string>());
           }
-          acc[item.domaines].get(item.criteres).add(item.origine_data);
+          
+          const criteriaSet = currentDomain.get(item.criteres);
+          if (criteriaSet && item.origine_data) {
+            criteriaSet.add(item.origine_data);
+          }
           
           return acc;
-        }, {} as Record<string, Map<string, Set<string>>>);
+        }, {});
 
         // Convert to final structure
         const newSectors = Object.entries(domainMap).map(([domain, criteriaMap], index) => ({
           text: domain,
-          color: colors[index % colors.length],
+          color: colorsList[index % colorsList.length],
           criteria: Array.from(criteriaMap.entries()).map(([criteres, originsSet]) => ({
             criteres,
             origine_data: Array.from(originsSet)
@@ -179,14 +175,13 @@ const HealthWheel = () => {
       setSelectedSector(selectedSector === index ? null : index);
       
       // Store the selected domain and its criteria in localStorage
-      const selectedDomain = sectors[index].text;
-      const selectedCriteria = sectors[index].criteria;
-      localStorage.setItem('selectedDomain', selectedDomain);
-      localStorage.setItem('selectedCriteria', JSON.stringify(selectedCriteria));
+      const selectedSectorData = sectors[index];
+      localStorage.setItem('selectedDomain', selectedSectorData.text);
+      localStorage.setItem('selectedCriteria', JSON.stringify(selectedSectorData.criteria));
       
       // Redirect to questionnaire chat after a short delay with the domain parameter
       setTimeout(() => {
-        router.push(`/questionnaire?domain=${encodeURIComponent(selectedDomain)}`);
+        router.push(`/questionnaire?domain=${encodeURIComponent(selectedSectorData.text)}`);
       }, 1000);
     }
   };
@@ -253,54 +248,8 @@ const HealthWheel = () => {
         </svg>
       </div>
       
-      {selectedSector !== null && (
-        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-xl max-w-md w-full max-h-[80vh] overflow-auto">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold" style={{ color: sectors[selectedSector].color }}>
-              {sectors[selectedSector].text}
-            </h2>
-            <button 
-              onClick={() => setSelectedSector(null)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              ×
-            </button>
-          </div>
-          <div className="space-y-2">
-            {sectors[selectedSector].criteria.map((item, index) => (
-              <div 
-                key={index} 
-                className="border rounded-lg overflow-hidden"
-              >
-                <div 
-                  className="flex justify-between items-center p-3 cursor-pointer hover:bg-gray-50"
-                  onClick={() => toggleCriteria(item.criteres)}
-                >
-                  <h3 className="font-medium">{item.criteres}</h3>
-                  {expandedCriteria.includes(item.criteres) ? (
-                    <ChevronUp className="w-5 h-5 text-gray-500" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-gray-500" />
-                  )}
-                </div>
-                {expandedCriteria.includes(item.criteres) && (
-                  <div className="bg-gray-50 p-3 border-t">
-                    <h4 className="text-sm font-medium text-gray-500 mb-2">Sources:</h4>
-                    <ul className="list-disc list-inside space-y-1">
-                      {item.origine_data.map((origin, idx) => (
-                        <li key={idx} className="text-sm text-gray-600">{origin}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-center text-gray-600">
-        Click on a sector to see details!
+        Click on a sector to start the survey!
       </div>
     </div>
   );
