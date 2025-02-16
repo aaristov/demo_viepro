@@ -1,12 +1,16 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Heart } from 'lucide-react';
+import { Heart, ChevronDown, ChevronUp } from 'lucide-react';
 import type { NocoDBResponse, CriteriaItem } from '@/app/types/nocodb';
 
 interface Sector {
   text: string;
   color: string;
+  criteria: Array<{
+    criteres: string;
+    origine_data: string[];
+  }>;
 }
 
 const HealthWheel = () => {
@@ -17,9 +21,10 @@ const HealthWheel = () => {
   const [lastTimestamp, setLastTimestamp] = useState(0);
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedSector, setSelectedSector] = useState<number | null>(null);
+  const [expandedCriteria, setExpandedCriteria] = useState<string[]>([]);
   const wheelRef = useRef<HTMLDivElement>(null);
 
-  // Color palette for the sectors
   const colors = [
     "#FFB5E8", "#B5EAEA", "#97C1A9", "#FCB5AC", "#BDB2FF", "#FFE5B5",
     "#FFC8A2", "#D4A5A5", "#9EE6CF", "#77DD77", "#B39EB5", "#FFB347"
@@ -28,9 +33,7 @@ const HealthWheel = () => {
   const fetchNocoDBData = async (): Promise<NocoDBResponse> => {
     try {
       const response = await fetch('/api/nocodb');
-      if (!response.ok) {
-        throw new Error('Failed to fetch data');
-      }
+      if (!response.ok) throw new Error('Failed to fetch data');
       const data: NocoDBResponse = await response.json();
       return data;
     } catch (error) {
@@ -39,17 +42,42 @@ const HealthWheel = () => {
     }
   };
 
+  const toggleCriteria = (criteria: string) => {
+    setExpandedCriteria(prev => 
+      prev.includes(criteria) 
+        ? prev.filter(c => c !== criteria)
+        : [...prev, criteria]
+    );
+  };
+
   useEffect(() => {
     const loadData = async () => {
       try {
         const data = await fetchNocoDBData();
-        // Extract unique domains from the data
-        const uniqueDomains = [...new Set(data.list.map(item => item.domaines))];
         
-        // Create sectors with colors
-        const newSectors = uniqueDomains.map((domain, index) => ({
+        // Group criteria and origin data by domain
+        const domainMap = data.list.reduce((acc, item) => {
+          if (!acc[item.domaines]) {
+            acc[item.domaines] = new Map();
+          }
+          
+          // Group origin data by criteria
+          if (!acc[item.domaines].has(item.criteres)) {
+            acc[item.domaines].set(item.criteres, new Set());
+          }
+          acc[item.domaines].get(item.criteres).add(item.origine_data);
+          
+          return acc;
+        }, {} as Record<string, Map<string, Set<string>>>);
+
+        // Convert to final structure
+        const newSectors = Object.entries(domainMap).map(([domain, criteriaMap], index) => ({
           text: domain,
-          color: colors[index % colors.length]
+          color: colors[index % colors.length],
+          criteria: Array.from(criteriaMap.entries()).map(([criteres, originsSet]) => ({
+            criteres,
+            origine_data: Array.from(originsSet)
+          }))
         }));
         
         setSectors(newSectors);
@@ -70,7 +98,7 @@ const HealthWheel = () => {
       if (!isDragging && Math.abs(velocity) > 0.1) {
         const deltaTime = timestamp - lastTimestamp;
         setRotation(prev => prev + velocity * deltaTime * 0.1);
-        setVelocity(prev => prev * 0.95); // Apply friction
+        setVelocity(prev => prev * 0.95);
         setLastTimestamp(timestamp);
         animationFrame = requestAnimationFrame(animate);
       }
@@ -141,6 +169,15 @@ const HealthWheel = () => {
     setLastTimestamp(performance.now());
   };
 
+  const handleSectorClick = (index: number) => {
+    if (!isDragging) {
+      if (selectedSector !== index) {
+        setExpandedCriteria([]); // Reset expanded state when switching sectors
+      }
+      setSelectedSector(selectedSector === index ? null : index);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -180,7 +217,7 @@ const HealthWheel = () => {
               const endY = Math.sin(nextAngle) * 300;
               
               return (
-                <g key={index}>
+                <g key={index} onClick={() => handleSectorClick(index)} style={{ cursor: 'pointer' }}>
                   <path
                     d={`M 0 0 L ${startX} ${startY} A 300 300 0 0 1 ${endX} ${endY} Z`}
                     fill={sector.color}
@@ -203,8 +240,54 @@ const HealthWheel = () => {
         </svg>
       </div>
       
+      {selectedSector !== null && (
+        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-xl max-w-md w-full max-h-[80vh] overflow-auto">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold" style={{ color: sectors[selectedSector].color }}>
+              {sectors[selectedSector].text}
+            </h2>
+            <button 
+              onClick={() => setSelectedSector(null)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              ×
+            </button>
+          </div>
+          <div className="space-y-2">
+            {sectors[selectedSector].criteria.map((item, index) => (
+              <div 
+                key={index} 
+                className="border rounded-lg overflow-hidden"
+              >
+                <div 
+                  className="flex justify-between items-center p-3 cursor-pointer hover:bg-gray-50"
+                  onClick={() => toggleCriteria(item.criteres)}
+                >
+                  <h3 className="font-medium">{item.criteres}</h3>
+                  {expandedCriteria.includes(item.criteres) ? (
+                    <ChevronUp className="w-5 h-5 text-gray-500" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-gray-500" />
+                  )}
+                </div>
+                {expandedCriteria.includes(item.criteres) && (
+                  <div className="bg-gray-50 p-3 border-t">
+                    <h4 className="text-sm font-medium text-gray-500 mb-2">Sources:</h4>
+                    <ul className="list-disc list-inside space-y-1">
+                      {item.origine_data.map((origin, idx) => (
+                        <li key={idx} className="text-sm text-gray-600">{origin}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-center text-gray-600">
-        Drag the wheel to explore domains!
+        Click on a sector to see details!
       </div>
     </div>
   );
