@@ -12,9 +12,21 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { domain, criteria } = body;
-
-    const prompt = `
+    
+    // Handle both direct messages and question generation
+    let messages;
+    if (body.message) {
+      // Direct chat message
+      messages = [{
+        role: "user",
+        content: body.message
+      }];
+    } else {
+      // Question generation for the wheel
+      const { domain, criteria } = body;
+      messages = [{
+        role: "user",
+        content: `
 Based on the following domain and criteria from a workplace satisfaction survey, create a friendly, conversational question to assess the user's satisfaction level from 1-5.
 
 Domain: ${domain}
@@ -28,28 +40,26 @@ Guidelines:
 - Keep it short and clear
 
 Example format: "How satisfied are you with [aspect] on a scale of 1-5, where 1 is [negative] and 5 is [positive]?"
-`;
+`
+      }];
+    }
 
     const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         'Authorization': `Bearer ${MISTRAL_API_KEY}`
       },
       body: JSON.stringify({
-        model: "mistral-tiny",
-        messages: [
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        max_tokens: 200,
-        temperature: 0.7
+        model: "mistral-large-latest",
+        messages: messages
       })
     });
 
     if (!response.ok) {
+      const errorData = await response.text();
+      console.error('Mistral API error:', errorData);
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
@@ -59,7 +69,7 @@ Example format: "How satisfied are you with [aspect] on a scale of 1-5, where 1 
   } catch (error) {
     console.error('Error calling Mistral API:', error);
     return NextResponse.json(
-      { error: 'Failed to generate question' },
+      { error: 'Failed to generate response', details: error.message },
       { status: 500 }
     );
   }

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Heart, ChevronDown, ChevronUp } from 'lucide-react';
 import type { NocoDBResponse, CriteriaItem } from '@/app/types/nocodb';
 
@@ -14,6 +15,7 @@ interface Sector {
 }
 
 const HealthWheel = () => {
+  const router = useRouter();
   const [rotation, setRotation] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [startAngle, setStartAngle] = useState(0);
@@ -175,6 +177,17 @@ const HealthWheel = () => {
         setExpandedCriteria([]); // Reset expanded state when switching sectors
       }
       setSelectedSector(selectedSector === index ? null : index);
+      
+      // Store the selected domain and its criteria in localStorage
+      const selectedDomain = sectors[index].text;
+      const selectedCriteria = sectors[index].criteria;
+      localStorage.setItem('selectedDomain', selectedDomain);
+      localStorage.setItem('selectedCriteria', JSON.stringify(selectedCriteria));
+      
+      // Redirect to questionnaire chat after a short delay with the domain parameter
+      setTimeout(() => {
+        router.push(`/questionnaire?domain=${encodeURIComponent(selectedDomain)}`);
+      }, 1000);
     }
   };
 
