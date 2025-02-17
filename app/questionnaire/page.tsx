@@ -6,6 +6,12 @@ import { Star, ArrowLeft } from 'lucide-react';
 import { useSurveyStore } from '../store/survey';
 import Link from 'next/link';
 
+interface StoredCriteria {
+  id: number;
+  criteres: string;
+  origine_data: string[];
+}
+
 interface Question {
   criteria: string;
   question: string | null;
@@ -27,6 +33,7 @@ function QuestionnairePage() {
   const domain = searchParams.get('domain');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
+  const [savedRatings, setSavedRatings] = useState<{[key: string]: boolean}>({});
   const { setResponse, getResponse } = useSurveyStore();
 
   useEffect(() => {
@@ -41,16 +48,16 @@ function QuestionnairePage() {
         return;
       }
 
-      const parsedCriteria = JSON.parse(storedCriteria);
+      const parsedCriteria: StoredCriteria[] = JSON.parse(storedCriteria);
       
       // Map the criteria to our question format
-      const domainCriteria = parsedCriteria.map(item => ({
+      const domainCriteria = parsedCriteria.map((item: StoredCriteria) => ({
         criteria: item.criteres,
         question: null,
         loading: false,
-        prompt: null,
-        error: null,
-        mistralResponse: null,
+        prompt: undefined,
+        error: undefined,
+        mistralResponse: undefined,
         origine_data: item.origine_data
       }));
 
@@ -159,7 +166,7 @@ La question doit être courte, positive, personnelle et faire référence aux so
       const storedCriteria = localStorage.getItem('selectedCriteria');
       if (storedCriteria) {
         const parsedCriteria = JSON.parse(storedCriteria);
-        const criteriaItem = parsedCriteria.find(item => item.criteres === criteria);
+        const criteriaItem = parsedCriteria.find((item: StoredCriteria) => item.criteres === criteria);
         
         if (criteriaItem) {
           // Link to criteria
@@ -180,6 +187,12 @@ La question doit être courte, positive, personnelle et faire référence aux so
           }
         }
       }
+      // Show confirmation
+      setSavedRatings(prev => ({ ...prev, [criteria]: true }));
+      // Hide confirmation after 3 seconds
+      setTimeout(() => {
+        setSavedRatings(prev => ({ ...prev, [criteria]: false }));
+      }, 3000);
     } catch (error) {
       console.error('Error saving rating:', error);
       // You might want to show an error message to the user here
@@ -285,13 +298,13 @@ La question doit être courte, positive, personnelle et faire référence aux so
                   )}
 
                   {!item.error && !item.loading && item.question && (
-                    <div className="flex gap-2 pt-4">
+                    <div className="flex gap-2 pt-4 items-center">
                       {[1, 2, 3, 4, 5].map((rating) => (
                         <button
                           key={rating}
                           onClick={() => handleRating(item.criteria, rating, index)}
                           className={`p-2 rounded-full hover:bg-yellow-50 transition-all ${
-                            rating <= getResponse(item.criteria) 
+                            rating <= (getResponse(item.criteria) || 0) 
                               ? 'text-yellow-400 [&>svg]:fill-yellow-400 scale-110' 
                               : 'text-gray-300 hover:text-yellow-200'
                           }`}
@@ -301,6 +314,14 @@ La question doit être courte, positive, personnelle et faire référence aux so
                           />
                         </button>
                       ))}
+                      {savedRatings[item.criteria] && (
+                        <span className="text-green-600 ml-4 flex items-center gap-2 animate-fade-in">
+                          <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                          Réponse enregistrée
+                        </span>
+                      )}
                     </div>
                   )}
                 </>

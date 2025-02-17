@@ -3,12 +3,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Heart, ChevronDown, ChevronUp } from 'lucide-react';
-import type { NocoDBResponse, Sector, DomainData } from '@/app/types/nocodb';
+import type { NocoDBResponse, Sector, DomainMapData, CriteriaData } from '@/app/types/nocodb';
 
 const colorsList = [
   "#FFB5E8", "#B5EAEA", "#97C1A9", "#FCB5AC", "#BDB2FF", "#FFE5B5",
   "#FFC8A2", "#D4A5A5", "#9EE6CF", "#77DD77", "#B39EB5", "#FFB347"
 ];
+
+interface CriteriaMapData extends Map<string, CriteriaData> {}
 
 const HealthWheel = () => {
   const router = useRouter();
@@ -49,7 +51,7 @@ const HealthWheel = () => {
         const data = await fetchNocoDBData();
         
         // Group criteria and origin data by domain
-        const domainMap = data.list.reduce<DomainData>((acc, item) => {
+        const domainMap = data.list.reduce<DomainMapData>((acc, item) => {
           // Create domain map if it doesn't exist
           if (!acc[item.domaines]) {
             acc[item.domaines] = new Map<string, { id: number; origins: Set<string> }>();
@@ -75,7 +77,7 @@ const HealthWheel = () => {
           criteria: Array.from(criteriaMap.entries()).map(([criteres, data]) => ({
             criteres,
             id: data.id,
-            origine_data: Array.from(data.origins)
+            origine_data: Array.from(data.origins) as string[]
           }))
         }));
         
