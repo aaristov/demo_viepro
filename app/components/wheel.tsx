@@ -52,17 +52,17 @@ const HealthWheel = () => {
         const domainMap = data.list.reduce<DomainData>((acc, item) => {
           // Create domain map if it doesn't exist
           if (!acc[item.domaines]) {
-            acc[item.domaines] = new Map<string, Set<string>>();
+            acc[item.domaines] = new Map<string, { id: number; origins: Set<string> }>();
           }
           
           const currentDomain = acc[item.domaines];
           if (!currentDomain.has(item.criteres)) {
-            currentDomain.set(item.criteres, new Set<string>());
+            currentDomain.set(item.criteres, { id: item.Id, origins: new Set<string>() });
           }
           
-          const criteriaSet = currentDomain.get(item.criteres);
-          if (criteriaSet && item.origine_data) {
-            criteriaSet.add(item.origine_data);
+          const criteriaData = currentDomain.get(item.criteres);
+          if (criteriaData && item.origine_data) {
+            criteriaData.origins.add(item.origine_data);
           }
           
           return acc;
@@ -72,9 +72,10 @@ const HealthWheel = () => {
         const newSectors = Object.entries(domainMap).map(([domain, criteriaMap], index) => ({
           text: domain,
           color: colorsList[index % colorsList.length],
-          criteria: Array.from(criteriaMap.entries()).map(([criteres, originsSet]) => ({
+          criteria: Array.from(criteriaMap.entries()).map(([criteres, data]) => ({
             criteres,
-            origine_data: Array.from(originsSet)
+            id: data.id,
+            origine_data: Array.from(data.origins)
           }))
         }));
         

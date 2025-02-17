@@ -25,6 +25,7 @@ export interface DomainData {
 
 export interface SectorCriteria {
   criteres: string;
+  id: number;
   origine_data: string[];
 }
 

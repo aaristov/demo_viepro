@@ -161,7 +161,7 @@ La question doit être courte, positive, personnelle et faire référence aux so
         const parsedCriteria = JSON.parse(storedCriteria);
         const criteriaItem = parsedCriteria.find(item => item.criteres === criteria);
         
-        if (criteriaItem?.id) {
+        if (criteriaItem) {
           // Link to criteria
           const linkCriteriaResponse = await fetch(`https://nocodb.chrono-tea.com/api/v2/tables/mris3k8w3rdyzbb/links/cxzwepnaeg4nfo7/records/${recordId}`, {
             method: 'POST',
@@ -171,7 +171,7 @@ La question doit être courte, positive, personnelle et faire référence aux so
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              Id: criteriaItem.id
+              Id: criteriaItem.id // Now we have the id from the stored criteria
             })
           });
 
