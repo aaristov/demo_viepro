@@ -112,6 +112,78 @@ La question doit être courte, positive, personnelle et faire référence aux so
 
   const handleRating = async (criteria: string, rating: number, currentIndex: number) => {
     setResponse(criteria, rating);
+    let patientId = 1;
+
+    try {
+      // First, create the rating record
+      const createRatingResponse = await fetch('https://nocodb.chrono-tea.com/api/v2/tables/mris3k8w3rdyzbb/records', {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'xc-token': 'dkjb66apilBsWlAq4Bap6ho3dsfquUo1Q-sbqDgF',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          Title: criteria,
+          type: 'rating',
+          data: String(rating),
+          rating: rating
+        })
+      });
+
+      if (!createRatingResponse.ok) {
+        throw new Error('Failed to create rating record');
+      }
+
+      const ratingRecord = await createRatingResponse.json();
+      const recordId = ratingRecord.Id;
+
+      // Link to patient (id=1)
+      const linkPatientResponse = await fetch(`https://nocodb.chrono-tea.com/api/v2/tables/mris3k8w3rdyzbb/links/c9i4dxedylmrvxr/records/${recordId}`, {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'xc-token': 'dkjb66apilBsWlAq4Bap6ho3dsfquUo1Q-sbqDgF',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          Id: patientId
+        })
+      });
+
+      if (!linkPatientResponse.ok) {
+        throw new Error(`Failed to link patient with id: ${patientId} to the record with id: ${recordId}`);
+      }
+
+      // Get the criteria ID from localStorage
+      const storedCriteria = localStorage.getItem('selectedCriteria');
+      if (storedCriteria) {
+        const parsedCriteria = JSON.parse(storedCriteria);
+        const criteriaItem = parsedCriteria.find(item => item.criteres === criteria);
+        
+        if (criteriaItem?.id) {
+          // Link to criteria
+          const linkCriteriaResponse = await fetch(`https://nocodb.chrono-tea.com/api/v2/tables/mris3k8w3rdyzbb/links/cxzwepnaeg4nfo7/records/${recordId}`, {
+            method: 'POST',
+            headers: {
+              'accept': 'application/json',
+              'xc-token': 'dkjb66apilBsWlAq4Bap6ho3dsfquUo1Q-sbqDgF',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              Id: criteriaItem.id
+            })
+          });
+
+          if (!linkCriteriaResponse.ok) {
+            throw new Error('Failed to link criteria');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error saving rating:', error);
+      // You might want to show an error message to the user here
+    }
 
     // If there's a next question, generate it
     if (currentIndex + 1 < questions.length) {
