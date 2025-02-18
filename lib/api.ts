@@ -34,7 +34,7 @@ export async function nocodbFetch(endpoint: string, options: RequestInit = {}) {
   console.log('Making NocoDB request to:', url);
   
   const headers = {
-    'xc-auth': token,
+    'xc-token': token,
     'accept': 'application/json',
     ...options.headers,
   };
