@@ -2,21 +2,26 @@
 
 import { signIn } from 'next-auth/react';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 
 export default function SignIn() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const justRegistered = searchParams.get('registered') === 'true';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
     try {
       const result = await signIn('credentials', {
-        email,
+        email: email.toLowerCase(),
         password,
         redirect: false,
       });
@@ -26,10 +31,13 @@ export default function SignIn() {
         return;
       }
 
-      router.push('/'); // Redirect to home page after successful login
+      router.push('/');
       router.refresh();
     } catch (error) {
       setError('An error occurred during sign in');
+      console.error('Sign in error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -41,6 +49,15 @@ export default function SignIn() {
             Sign in to your account
           </h2>
         </div>
+
+        {justRegistered && (
+          <div className="rounded-md bg-green-50 p-4">
+            <div className="text-sm text-green-700 text-center">
+              Account created successfully! Please sign in.
+            </div>
+          </div>
+        )}
+
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
@@ -82,10 +99,17 @@ export default function SignIn() {
           <div>
             <button
               type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              disabled={loading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400"
             >
-              Sign in
+              {loading ? 'Signing in...' : 'Sign in'}
             </button>
+          </div>
+
+          <div className="text-sm text-center">
+            <Link href="/auth/signup" className="font-medium text-indigo-600 hover:text-indigo-500">
+              Don't have an account? Sign up
+            </Link>
           </div>
         </form>
       </div>

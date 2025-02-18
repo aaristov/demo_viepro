@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
-const NOCODB_BASE_URL = 'https://nocodb.chrono-tea.com';
+const NOCODB_BASE_URL = process.env.NOCODB_BASE_URL;
 
 // Load token at runtime
 const getNocoDBToken = () => {

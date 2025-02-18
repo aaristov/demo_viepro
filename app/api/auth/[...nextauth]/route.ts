@@ -1,10 +1,12 @@
-import NextAuth from "next-auth";
+import NextAuth, { NextAuthOptions, User } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { nocodbFetch } from "@/lib/api";
+import { compare } from "bcryptjs";
+import { JWT } from "next-auth/jwt";
 
-const TABLE_ID = 'mxusip10ck64oiu';
+const TABLE_ID = process.env.NOCODB_PATIENTS_TABLE_ID as string;
 
-export const authOptions = {
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -12,29 +14,29 @@ export const authOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" }
       },
-      async authorize(credentials) {
+      async authorize(credentials): Promise<User | null> {
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
 
         try {
-          // Search for user in NocoDB - adding URL encoding for safety
-          const query = `(email,eq,${credentials.email})`;
-          console.log('Attempting to fetch user with query:', query);
+          const encodedEmail = encodeURIComponent(credentials.email.toLowerCase());
+          const query = `(email,eq,${encodedEmail})`;
           
           const response = await nocodbFetch(
             `/api/v2/tables/${TABLE_ID}/records?where=${query}`
           );
           
           const data = await response.json();
-          console.log('NocoDB response:', data);
           
           if (data.list && data.list.length > 0) {
             const user = data.list[0];
+            const storedHashedPassword = Buffer.from(user.password, 'base64').toString();
+            const isValid = await compare(credentials.password, storedHashedPassword);
             
-            if (user.password === credentials.password) {
+            if (isValid) {
               return {
-                id: user.Id.toString(),
+                id: user.Id?.toString() || user.id?.toString(),
                 name: user.name,
                 email: user.email,
                 role: user.role
@@ -49,29 +51,31 @@ export const authOptions = {
       }
     })
   ],
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
-  debug: true, // Enable debug messages
-  pages: {
-    signIn: '/auth/signin',
-    error: '/auth/error',
-  },
   callbacks: {
-    async jwt({ token, user }: { token: any, user: any }) {
+    async jwt({ token, user }) {
       if (user) {
         token.role = user.role;
+        token.id = user.id;
       }
       return token;
     },
-    async session({ session, token }: { session: any, token: any }) {
-      if (token) {
-        session.user.role = token.role;
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.role = token.role as string;
+        session.user.id = token.id as string;
       }
       return session;
     }
   },
+  pages: {
+    signIn: '/auth/signin',
+    error: '/auth/error',
+  },
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  debug: process.env.NODE_ENV === 'development',
   secret: process.env.NEXTAUTH_SECRET,
 };
 

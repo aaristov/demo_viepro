@@ -1,4 +1,5 @@
 import { Providers } from './providers';
+import NavBar from './components/NavBar';
 import type { Metadata } from "next";
 import "./globals.css";
 
@@ -15,7 +16,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <Providers>{children}</Providers>
+        <Providers>
+          <div className="min-h-screen bg-gray-50">
+            <NavBar />
+            <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+              {children}
+            </main>
+          </div>
+        </Providers>
       </body>
     </html>
   );
