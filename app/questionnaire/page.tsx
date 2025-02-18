@@ -5,6 +5,8 @@ import { useSearchParams } from 'next/navigation';
 import { Star, ArrowLeft } from 'lucide-react';
 import { useSurveyStore } from '../store/survey';
 import Link from 'next/link';
+import { useSession } from "next-auth/react";
+import { redirect } from 'next/navigation';
 
 interface StoredCriteria {
   id: number;
@@ -35,6 +37,14 @@ function QuestionnairePage() {
   const [loading, setLoading] = useState(true);
   const [savedRatings, setSavedRatings] = useState<{[key: string]: boolean}>({});
   const { setResponse, getResponse } = useSurveyStore();
+  const { data: session, status } = useSession();
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      redirect("/auth/signin");
+    }
+  }, [status]);
 
   useEffect(() => {
     if (!domain) return;
@@ -118,8 +128,13 @@ La question doit être courte, positive, personnelle et faire référence aux so
   };
 
   const handleRating = async (criteria: string, rating: number, currentIndex: number) => {
+    if (!session?.user?.id) {
+      console.error('No user ID found in session');
+      return;
+    }
+
     setResponse(criteria, rating);
-    const patientId = 1; // You might want to get this from context or props
+    const patientId = parseInt(session.user.id); // Convert string ID to number if needed
 
     try {
       // Get the criteria ID from localStorage
@@ -174,7 +189,8 @@ La question doit être courte, positive, personnelle et faire référence aux so
     }
   };
 
-  if (loading) {
+
+  if (status === "loading" || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-8">
         <div className="max-w-2xl mx-auto">
