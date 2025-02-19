@@ -19,12 +19,22 @@ export interface NocoDBResponse {
   pageInfo: PageInfo;
 }
 
+export interface CriteriaData {
+  id: number;
+  origins: Set<string>;
+}
+
+export interface DomainMapData {
+  [domain: string]: Map<string, CriteriaData>;
+}
+
 export interface DomainData {
-  [domain: string]: Map<string, Set<string>>;
+  [domain: string]: Map<string, CriteriaData>;
 }
 
 export interface SectorCriteria {
   criteres: string;
+  id: number;
   origine_data: string[];
 }
 

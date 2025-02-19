@@ -5,6 +5,14 @@ import { useSearchParams } from 'next/navigation';
 import { Star, ArrowLeft } from 'lucide-react';
 import { useSurveyStore } from '../store/survey';
 import Link from 'next/link';
+import { useSession } from "next-auth/react";
+import { redirect } from 'next/navigation';
+
+interface StoredCriteria {
+  id: number;
+  criteres: string;
+  origine_data: string[];
+}
 
 interface Question {
   criteria: string;
@@ -27,7 +35,16 @@ function QuestionnairePage() {
   const domain = searchParams.get('domain');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
+  const [savedRatings, setSavedRatings] = useState<{[key: string]: boolean}>({});
   const { setResponse, getResponse } = useSurveyStore();
+  const { data: session, status } = useSession();
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      redirect("/auth/signin");
+    }
+  }, [status]);
 
   useEffect(() => {
     if (!domain) return;
@@ -41,16 +58,16 @@ function QuestionnairePage() {
         return;
       }
 
-      const parsedCriteria = JSON.parse(storedCriteria);
+      const parsedCriteria: StoredCriteria[] = JSON.parse(storedCriteria);
       
       // Map the criteria to our question format
-      const domainCriteria = parsedCriteria.map(item => ({
+      const domainCriteria = parsedCriteria.map((item: StoredCriteria) => ({
         criteria: item.criteres,
         question: null,
         loading: false,
-        prompt: null,
-        error: null,
-        mistralResponse: null,
+        prompt: undefined,
+        error: undefined,
+        mistralResponse: undefined,
         origine_data: item.origine_data
       }));
 
@@ -111,20 +128,71 @@ La question doit être courte, positive, personnelle et faire référence aux so
   };
 
   const handleRating = async (criteria: string, rating: number, currentIndex: number) => {
-    setResponse(criteria, rating);
+    if (!session?.user?.id) {
+      console.error('No user ID found in session');
+      return;
+    }
 
-    // If there's a next question, generate it
-    if (currentIndex + 1 < questions.length) {
-      const nextQuestion = questions[currentIndex + 1];
-      if (!nextQuestion.question && !nextQuestion.loading) {
-        generateQuestion(nextQuestion.criteria, nextQuestion.origine_data, currentIndex + 1);
+    setResponse(criteria, rating);
+    const patientId = parseInt(session.user.id); // Convert string ID to number if needed
+
+    try {
+      // Get the criteria ID from localStorage
+      const storedCriteria = localStorage.getItem('selectedCriteria');
+      if (!storedCriteria) {
+        throw new Error('No criteria found in localStorage');
       }
+
+      const parsedCriteria = JSON.parse(storedCriteria);
+      const criteriaItem = parsedCriteria.find((item: StoredCriteria) => item.criteres === criteria);
+      
+      if (!criteriaItem) {
+        throw new Error('Criteria not found in stored data');
+      }
+
+      // Call our server-side API endpoint
+      const response = await fetch('/api/ratings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          criteria,
+          rating,
+          patientId,
+          criteriaId: criteriaItem.id
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save rating');
+      }
+
+      // Show success confirmation
+      setSavedRatings(prev => ({ ...prev, [criteria]: true }));
+      
+      // Hide confirmation after 3 seconds
+      setTimeout(() => {
+        setSavedRatings(prev => ({ ...prev, [criteria]: false }));
+      }, 3000);
+
+      // If there's a next question, generate it
+      if (currentIndex + 1 < questions.length) {
+        const nextQuestion = questions[currentIndex + 1];
+        if (!nextQuestion.question && !nextQuestion.loading) {
+          generateQuestion(nextQuestion.criteria, nextQuestion.origine_data, currentIndex + 1);
+        }
+      }
+    } catch (error) {
+      console.error('Error saving rating:', error);
+      // You might want to show an error message to the user here
     }
   };
 
-  if (loading) {
+
+  if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-8">
+      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-8">
         <div className="max-w-2xl mx-auto">
           <div className="animate-pulse">
             <div className="h-8 bg-gray-200 rounded w-3/4 mb-6"></div>
@@ -148,8 +216,10 @@ La question doit être courte, positive, personnelle et faire référence aux so
             href="/"
             className="inline-flex items-center text-gray-600 hover:text-gray-900"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Retour à la roue
+            <div className="flex items-center gap-2 mb-4">
+              <ArrowLeft className="w-5 h-5 text-blue-500" />
+              Retour à la roue
+            </div>
           </Link>
           <h1 className="text-2xl font-bold mt-4 text-gray-900">
             Questions sur {domain}
@@ -158,10 +228,7 @@ La question doit être courte, positive, personnelle et faire référence aux so
 
         <div className="space-y-8">
           {questions.map((item, index) => (
-            <div 
-              key={index}
-              className="bg-white rounded-lg shadow-sm p-6 transition-all space-y-4"
-            >
+            <div key={index} className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all p-8 space-y-6 border border-gray-100">
               <div className="border-b pb-4">
                 <h3 className="font-semibold text-gray-700 mb-2">Critère</h3>
                 <p className="text-gray-600">{item.criteria}</p>
@@ -182,9 +249,9 @@ La question doit être courte, positive, personnelle et faire référence aux so
                   ) : (
                     <>
                       {item.question && (
-                        <div className="mt-4">
-                          <h3 className="font-semibold text-gray-700 mb-2">Question</h3>
-                          <p className="text-gray-800 text-lg">{item.question}</p>
+                        <div className="mt-6 bg-blue-50 p-6 rounded-xl border border-blue-100">
+                          <h3 className="font-semibold text-blue-900 mb-3 text-lg">Question</h3>
+                          <p className="text-blue-800 text-xl leading-relaxed question-appear">{item.question}</p>
                         </div>
                       )}
                       
@@ -214,22 +281,28 @@ La question doit être courte, positive, personnelle et faire référence aux so
                   )}
 
                   {!item.error && !item.loading && item.question && (
-                    <div className="flex gap-2 pt-4">
+                    <div className="flex gap-2 pt-4 items-center">
                       {[1, 2, 3, 4, 5].map((rating) => (
                         <button
                           key={rating}
                           onClick={() => handleRating(item.criteria, rating, index)}
-                          className={`p-1 rounded hover:bg-gray-100 transition-colors ${
-                            rating <= getResponse(item.criteria) ? 'text-yellow-500' : 'text-gray-400'
+                          className={`p-2 rounded-full hover:bg-yellow-50 transition-all ${
+                            rating <= (getResponse(item.criteria) || 0) 
+                              ? 'text-yellow-400 [&>svg]:fill-yellow-400 scale-110' 
+                              : 'text-gray-300 hover:text-yellow-200'
                           }`}
                         >
-                          <Star 
-                            className={`w-8 h-8 ${
-                              rating <= getResponse(item.criteria) ? 'fill-current' : ''
-                            }`}
-                          />
+                          <Star className="w-8 h-8" />
                         </button>
                       ))}
+                      {savedRatings[item.criteria] && (
+                        <span className="text-green-600 ml-4 flex items-center gap-2 animate-fade-in">
+                          <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                          Réponse enregistrée
+                        </span>
+                      )}
                     </div>
                   )}
                 </>
