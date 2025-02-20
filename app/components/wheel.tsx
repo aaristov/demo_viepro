@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Heart, ChevronDown, ChevronUp } from 'lucide-react';
+import { Heart, ChevronDown, ChevronUp, Star } from 'lucide-react';
 import type { NocoDBResponse, Sector, DomainMapData, CriteriaData } from '@/app/types/nocodb';
 
 const colorsList = [
@@ -11,6 +11,10 @@ const colorsList = [
 ];
 
 interface CriteriaMapData extends Map<string, CriteriaData> {}
+
+interface DomainAverages {
+  [key: string]: number | string;
+}
 
 const HealthWheel = () => {
   const router = useRouter();
@@ -23,6 +27,7 @@ const HealthWheel = () => {
   const [loading, setLoading] = useState(true);
   const [selectedSector, setSelectedSector] = useState<number | null>(null);
   const [expandedCriteria, setExpandedCriteria] = useState<string[]>([]);
+  const [domainAverages, setDomainAverages] = useState<DomainAverages>({});
   const wheelRef = useRef<HTMLDivElement>(null);
   
   const fetchNocoDBData = async (): Promise<NocoDBResponse> => {
@@ -37,84 +42,25 @@ const HealthWheel = () => {
     }
   };
 
-  const toggleCriteria = (criteria: string) => {
-    setExpandedCriteria(prev => 
-      prev.includes(criteria) 
-        ? prev.filter(c => c !== criteria)
-        : [...prev, criteria]
-    );
+  const fetchStarAverages = async (patientId: string) => {
+    try {
+      const response = await fetch(`/api/stars?patient_id=${patientId}`);
+      if (!response.ok) throw new Error('Failed to fetch star averages');
+      const data = await response.json();
+      console.log('Star averages:', data); // Debug log
+      setDomainAverages(data);
+    } catch (error) {
+      console.error('Error fetching star averages:', error);
+    }
   };
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const data = await fetchNocoDBData();
-        
-        // Group criteria and origin data by domain
-        const domainMap = data.list.reduce<DomainMapData>((acc, item) => {
-          // Create domain map if it doesn't exist
-          if (!acc[item.domaines]) {
-            acc[item.domaines] = new Map<string, { id: number; origins: Set<string> }>();
-          }
-          
-          const currentDomain = acc[item.domaines];
-          if (!currentDomain.has(item.criteres)) {
-            currentDomain.set(item.criteres, { id: item.Id, origins: new Set<string>() });
-          }
-          
-          const criteriaData = currentDomain.get(item.criteres);
-          if (criteriaData && item.origine_data) {
-            criteriaData.origins.add(item.origine_data);
-          }
-          
-          return acc;
-        }, {});
-
-        // Convert to final structure
-        const newSectors = Object.entries(domainMap).map(([domain, criteriaMap], index) => ({
-          text: domain,
-          color: colorsList[index % colorsList.length],
-          criteria: Array.from(criteriaMap.entries()).map(([criteres, data]) => ({
-            criteres,
-            id: data.id,
-            origine_data: Array.from(data.origins) as string[]
-          }))
-        }));
-        
-        setSectors(newSectors);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error loading data:', error);
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    let animationFrame: number;
-    
-    const animate = (timestamp: number) => {
-      if (!isDragging && Math.abs(velocity) > 0.1) {
-        const deltaTime = timestamp - lastTimestamp;
-        setRotation(prev => prev + velocity * deltaTime * 0.1);
-        setVelocity(prev => prev * 0.95);
-        setLastTimestamp(timestamp);
-        animationFrame = requestAnimationFrame(animate);
-      }
-    };
-
-    if (!isDragging && Math.abs(velocity) > 0.1) {
-      animationFrame = requestAnimationFrame(animate);
+  const renderStars = (rating: number | string) => {
+    if (rating === 'NA') return 'NA';
+    if (typeof rating === 'number') {
+      return '★'.repeat(Math.round(rating));
     }
-
-    return () => {
-      if (animationFrame) {
-        cancelAnimationFrame(animationFrame);
-      }
-    };
-  }, [isDragging, velocity, lastTimestamp]);
+    return '';
+  };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!wheelRef.current) return;
@@ -189,6 +135,79 @@ const HealthWheel = () => {
     }
   };
 
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const data = await fetchNocoDBData();
+        
+        // Group criteria and origin data by domain
+        const domainMap = data.list.reduce<DomainMapData>((acc, item) => {
+          if (!acc[item.domaines]) {
+            acc[item.domaines] = new Map<string, { id: number; origins: Set<string> }>();
+          }
+          
+          const currentDomain = acc[item.domaines];
+          if (!currentDomain.has(item.criteres)) {
+            currentDomain.set(item.criteres, { id: item.Id, origins: new Set<string>() });
+          }
+          
+          const criteriaData = currentDomain.get(item.criteres);
+          if (criteriaData && item.origine_data) {
+            criteriaData.origins.add(item.origine_data);
+          }
+          
+          return acc;
+        }, {});
+
+        // Convert to final structure
+        const newSectors = Object.entries(domainMap).map(([domain, criteriaMap], index) => ({
+          text: domain,
+          color: colorsList[index % colorsList.length],
+          criteria: Array.from(criteriaMap.entries()).map(([criteres, data]) => ({
+            criteres,
+            id: data.id,
+            origine_data: Array.from(data.origins) as string[]
+          }))
+        }));
+        
+        setSectors(newSectors);
+        setLoading(false);
+
+        // Fetch star averages for patient ID 7
+        await fetchStarAverages('7');
+      } catch (error) {
+        console.error('Error loading data:', error);
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    let animationFrame: number;
+    
+    const animate = (timestamp: number) => {
+      if (!isDragging && Math.abs(velocity) > 0.1) {
+        const deltaTime = timestamp - lastTimestamp;
+        setRotation(prev => prev + velocity * deltaTime * 0.1);
+        setVelocity(prev => prev * 0.95);
+        setLastTimestamp(timestamp);
+        animationFrame = requestAnimationFrame(animate);
+      }
+    };
+
+    if (!isDragging && Math.abs(velocity) > 0.1) {
+      animationFrame = requestAnimationFrame(animate);
+    }
+
+    return () => {
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+      }
+    };
+  }, [isDragging, velocity, lastTimestamp]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -244,6 +263,16 @@ const HealthWheel = () => {
                   >
                     {sector.text}
                   </text>
+                  <text
+                    x={Math.cos(midAngle) * 160}
+                    y={Math.sin(midAngle) * 160}
+                    textAnchor="middle"
+                    transform={`rotate(${90 + midAngle * 180 / Math.PI} ${Math.cos(midAngle) * 160} ${Math.sin(midAngle) * 160})`}
+                    className="text-yellow-500 text-base font-bold"
+                    style={{ userSelect: 'none' }}
+                  >
+                    {renderStars(domainAverages[sector.text] || 'NA')}
+                  </text>
                 </g>
               );
             })}
@@ -252,7 +281,8 @@ const HealthWheel = () => {
       </div>
       
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-center text-gray-600">
-        Click on a sector to start the survey!
+        <p>Click on a sector to start the survey!</p>
+        <p className="text-sm mt-2">Stars show your average rating for each domain</p>
       </div>
     </div>
   );
