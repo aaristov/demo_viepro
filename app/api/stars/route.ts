@@ -1,7 +1,23 @@
 import { NextResponse } from 'next/server';
 
-const NOCODB_URL = process.env.NOCODB_URL;
-const NOCODB_API_KEY = process.env.NOCODB_API_KEY;
+const NOCODB_URL = process.env.NOCODB_BASE_URL;
+const NOCODB_API_KEY = process.env.NOCODB_API_TOKEN;
+
+interface NocoDBRecord {
+  Id: number;
+  Title: string;
+  CreatedAt: string;
+  UpdatedAt: string | null;
+  patient_id: number;
+  type: string;
+  data: string;
+  rating: number;
+  criteres_domaine: string;
+}
+
+interface NocoDBResponse {
+  list: NocoDBRecord[];
+}
 
 export async function GET(request: Request) {
   try {
@@ -29,23 +45,26 @@ export async function GET(request: Request) {
       throw new Error('Failed to fetch data from NocoDB');
     }
 
-    const data = await response.json();
+    const data = await response.json() as NocoDBResponse;
 
-    // Calculate average stars per domain
-    const domainAverages = data.list.reduce((acc: { [key: string]: { total: number; count: number } }, item: any) => {
-      if (!acc[item.domaines]) {
-        acc[item.domaines] = { total: 0, count: 0 };
+    // Group by criteres_domaines and calculate average rating
+    const domainAverages = data.list.reduce((acc: { [key: string]: { total: number; count: number } }, item) => {
+      const domain = item.criteres_domaine;
+      if (!acc[domain]) {
+        acc[domain] = { total: 0, count: 0 };
       }
-      if (item.stars) {
-        acc[item.domaines].total += item.stars;
-        acc[item.domaines].count += 1;
+      if (item.rating) {
+        acc[domain].total += item.rating;
+        acc[domain].count += 1;
       }
       return acc;
     }, {});
 
-    // Convert to averages
-    const averages = Object.entries(domainAverages).reduce((acc: { [key: string]: number }, [domain, data]) => {
-      acc[domain] = data.count > 0 ? Math.round((data.total / data.count) * 10) / 10 : 0;
+    // Convert to averages and format for display
+    const averages = Object.entries(domainAverages).reduce((acc: { [key: string]: number | string }, [domain, data]) => {
+      acc[domain] = data.count > 0 
+        ? Math.round((data.total / data.count) * 10) / 10
+        : 'NA';
       return acc;
     }, {});
 
