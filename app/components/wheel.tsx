@@ -12,9 +12,42 @@ const colorsList = [
 
 interface CriteriaMapData extends Map<string, CriteriaData> {}
 
-interface DomainAverages {
-  [key: string]: number | string;
+interface DomainData {
+  average: number | string;
+  lastUpdate: string | null;
 }
+
+interface DomainAverages {
+  [key: string]: DomainData;
+}
+
+const getTimeAgo = (dateString: string | null): string => {
+  if (!dateString) return 'No updates';
+  
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffTime = Math.abs(now.getTime() - date.getTime());
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) {
+    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    if (diffHours === 0) {
+      const diffMinutes = Math.floor(diffTime / (1000 * 60));
+      return diffMinutes <= 1 ? 'Just now' : `${diffMinutes} minutes ago`;
+    }
+    return `${diffHours}h ago`;
+  } else if (diffDays === 1) {
+    return 'Yesterday';
+  } else if (diffDays < 7) {
+    return `${diffDays} days ago`;
+  } else if (diffDays < 30) {
+    const weeks = Math.floor(diffDays / 7);
+    return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
+  } else {
+    const months = Math.floor(diffDays / 30);
+    return `${months} ${months === 1 ? 'month' : 'months'} ago`;
+  }
+};
 
 const HealthWheel = () => {
   const router = useRouter();
@@ -246,6 +279,8 @@ const HealthWheel = () => {
               const endX = Math.cos(nextAngle) * 300;
               const endY = Math.sin(nextAngle) * 300;
               
+              const domainData = domainAverages[sector.text] || { average: 'NA', lastUpdate: null };
+              
               return (
                 <g key={index} onClick={() => handleSectorClick(index)} style={{ cursor: 'pointer' }}>
                   <path
@@ -271,7 +306,17 @@ const HealthWheel = () => {
                     className="text-yellow-500 text-base font-bold"
                     style={{ userSelect: 'none' }}
                   >
-                    {renderStars(domainAverages[sector.text] || 'NA')}
+                    {renderStars(domainData.average)}
+                  </text>
+                  <text
+                    x={Math.cos(midAngle) * 130}
+                    y={Math.sin(midAngle) * 130}
+                    textAnchor="middle"
+                    transform={`rotate(${90 + midAngle * 180 / Math.PI} ${Math.cos(midAngle) * 130} ${Math.sin(midAngle) * 130})`}
+                    className="text-gray-500 text-xs"
+                    style={{ userSelect: 'none' }}
+                  >
+                    {getTimeAgo(domainData.lastUpdate)}
                   </text>
                 </g>
               );
