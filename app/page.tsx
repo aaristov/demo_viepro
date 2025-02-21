@@ -18,7 +18,7 @@ export default function HomePage() {
         <div className="flex flex-col items-center text-center mb-16">
           <div className="mb-8 relative w-48 h-80">
             <img 
-              src="logo.svg"
+              src="/logo.svg"
               alt="One Life+ Logo"
               className="h-120"
             />
@@ -117,7 +117,7 @@ export default function HomePage() {
                 Sign In
               </Button>
             </Link>
-            <Link href="/auth/register">
+            <Link href="/auth/signup">
               <Button 
                 variant="outline"
                 className="px-8 py-3 rounded-lg text-lg font-semibold"
