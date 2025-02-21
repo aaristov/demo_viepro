@@ -115,8 +115,7 @@ export async function POST(request: Request) {
           type: 'rating',
           data: rating.toString(),
           'critères_id': criteriaId,
-          rating: rating,
-          CreatedAt: new Date().toISOString()
+          rating: rating
         }),
       }
     );
