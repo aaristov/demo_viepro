@@ -19,6 +19,11 @@ interface NocoDBResponse {
   list: NocoDBRecord[];
 }
 
+interface DomainData {
+  average: number | string;
+  lastUpdate: string | null;
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -47,28 +52,35 @@ export async function GET(request: Request) {
 
     const data = await response.json() as NocoDBResponse;
 
-    // Group by criteres_domaines and calculate average rating
-    const domainAverages = data.list.reduce((acc: { [key: string]: { total: number; count: number } }, item) => {
+    // Group by criteres_domaines and calculate average rating and track last update
+    const domainData = data.list.reduce((acc: { [key: string]: { total: number; count: number; lastUpdate: string | null } }, item) => {
       const domain = item.criteres_domaine;
       if (!acc[domain]) {
-        acc[domain] = { total: 0, count: 0 };
+        acc[domain] = { total: 0, count: 0, lastUpdate: null };
       }
       if (item.rating) {
         acc[domain].total += item.rating;
         acc[domain].count += 1;
+        
+        // Update lastUpdate if this record is more recent
+        const itemDate = item.UpdatedAt || item.CreatedAt;
+        if (!acc[domain].lastUpdate || itemDate > acc[domain].lastUpdate) {
+          acc[domain].lastUpdate = itemDate;
+        }
       }
       return acc;
     }, {});
 
     // Convert to averages and format for display
-    const averages = Object.entries(domainAverages).reduce((acc: { [key: string]: number | string }, [domain, data]) => {
-      acc[domain] = data.count > 0 
-        ? Math.round((data.total / data.count) * 10) / 10
-        : 'NA';
+    const domainInfo: { [key: string]: DomainData } = Object.entries(domainData).reduce((acc, [domain, data]) => {
+      acc[domain] = {
+        average: data.count > 0 ? Math.round((data.total / data.count) * 10) / 10 : 'NA',
+        lastUpdate: data.lastUpdate
+      };
       return acc;
-    }, {});
+    }, {} as { [key: string]: DomainData });
 
-    return NextResponse.json(averages);
+    return NextResponse.json(domainInfo);
   } catch (error) {
     console.error('Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
