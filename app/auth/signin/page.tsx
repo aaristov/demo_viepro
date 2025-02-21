@@ -31,7 +31,7 @@ function SignInForm() {
         return;
       }
 
-      router.push('/');
+      router.push('/dashboard');
       router.refresh();
     } catch (error) {
       setError('An error occurred during sign in');

@@ -2,7 +2,6 @@ import NextAuth, { NextAuthOptions, User } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { nocodbFetch } from "@/lib/api";
 import { compare } from "bcryptjs";
-import { JWT } from "next-auth/jwt";
 
 const TABLE_ID = process.env.NOCODB_PATIENTS_TABLE_ID as string;
 

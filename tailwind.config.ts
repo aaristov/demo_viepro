@@ -8,6 +8,12 @@ const config: Config = {
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
+	gradientColorStops: theme => ({
+		...theme['colors'],
+		'green': '#1ca4ac',
+		'dark-green': ' #104069',
+		'light': '#ffffff'
+	   }),
   	extend: {
   		colors: {
   			yellow: {
