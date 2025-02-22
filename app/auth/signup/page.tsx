@@ -1,14 +1,18 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
-import Link from 'next/link';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+import Link from "next/link";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { fr } from 'date-fns/locale';
+import { fr } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -18,29 +22,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DateInput } from "@/components/DateInput";
 
 export default function SignUp() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    name: '',
-    surname: '',
-    email: '',
-    password: '',
-    city: ''
+    name: "",
+    surname: "",
+    email: "",
+    password: "",
+    city: "",
   });
   const [date, setDate] = useState<Date>();
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [selectedYear, setSelectedYear] = useState<number>();
 
   const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: currentYear - 1900 + 1 }, (_, i) => currentYear - i);
+  const years = Array.from(
+    { length: currentYear - 1900 + 1 },
+    (_, i) => currentYear - i,
+  );
 
   const handleYearSelect = (yearStr: string) => {
     const year = parseInt(yearStr);
     setSelectedYear(year);
-    
+
     // If no date is selected, set to middle of selected year
     if (!date) {
       setDate(new Date(year, 6, 1));
@@ -67,18 +75,21 @@ export default function SignUp() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Clear previous error
-    setError('');
+    setError("");
 
     // Validate inputs
     if (!date) {
-      setError('Please select a birth date');
+      setError("Veuillez sélectionner une date de naissance");
       return;
     }
 
-    if (!validatePassword(formData.password)) {
-      setError('Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one number');
+    const passwordValidation = validatePassword(formData.password);
+    console.log("passwordValidation", passwordValidation);
+    console.log("formData.password", formData.password);
+    if (!passwordValidation) {
+      setError(passwordValidation || "Mot de passe invalide");
       return;
     }
 
@@ -86,13 +97,13 @@ export default function SignUp() {
 
     try {
       // Format date as YYYY-MM-DD
-      const formattedDate = format(date, 'yyyy-MM-dd');
+      const formattedDate = format(date, "yyyy-MM-dd");
 
       // Register the user
-      const registerResponse = await fetch('/api/auth/signup', {
-        method: 'POST',
+      const registerResponse = await fetch("/api/auth/signup", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           ...formData,
@@ -103,39 +114,39 @@ export default function SignUp() {
       const registerData = await registerResponse.json();
 
       if (!registerResponse.ok) {
-        throw new Error(registerData.error || 'Registration failed');
+        throw new Error(registerData.error || "L'inscription a échoué");
       }
 
       // If registration is successful, sign in the user
-      const signInResult = await signIn('credentials', {
+      const signInResult = await signIn("credentials", {
         email: formData.email,
         password: formData.password,
         redirect: false,
       });
 
       if (signInResult?.error) {
-        throw new Error('Failed to sign in after registration');
+        throw new Error("Échec de la connexion après l'inscription");
       }
 
       // Redirect to dashboard or home page
-      router.push('/');
+      router.push("/dashboard");
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Registration failed';
+      const errorMessage = err instanceof Error
+        ? err.message
+        : "L'inscription a échoué";
       setError(errorMessage);
-      console.error('Registration error:', err);
+      console.error("Registration error:", err);
     } finally {
       setLoading(false);
     }
   };
 
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     }));
   };
-
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -148,7 +159,10 @@ export default function SignUp() {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm space-y-4">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="name"
+                className="block text-sm font-medium text-gray-700"
+              >
                 First Name
               </label>
               <input
@@ -163,7 +177,10 @@ export default function SignUp() {
             </div>
 
             <div>
-              <label htmlFor="surname" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="surname"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Last Name
               </label>
               <input
@@ -178,7 +195,10 @@ export default function SignUp() {
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Email address
               </label>
               <input
@@ -193,7 +213,10 @@ export default function SignUp() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Password
               </label>
               <input
@@ -211,56 +234,20 @@ export default function SignUp() {
               <label className="block text-sm font-medium text-gray-700">
                 Date de naissance
               </label>
-              <div className="grid gap-2">
-                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !date && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, 'dd/MM/yyyy', { locale: fr }) : <span>Sélectionner une date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <div className="p-3 border-b">
-                      <Select 
-                        onValueChange={handleYearSelect}
-                        value={selectedYear?.toString()}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner l'année" />
-                        </SelectTrigger>
-                        <SelectContent position="popper">
-                          {years.map((year) => (
-                            <SelectItem key={year} value={year.toString()}>
-                              {year}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={handleDateSelect}
-                      locale={fr}
-                      defaultMonth={date || new Date(selectedYear || currentYear, 0, 1)}
-                      initialFocus
-                      fromYear={1900}
-                      toYear={currentYear}
-                      disabled={(date) => date > new Date()}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+              <DateInput
+                value={date}
+                onChange={handleDateSelect}
+                error={!date
+                  ? "Veuillez entrer votre date de naissance"
+                  : undefined}
+              />
             </div>
 
             <div>
-              <label htmlFor="city" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="city"
+                className="block text-sm font-medium text-gray-700"
+              >
                 City
               </label>
               <input
@@ -285,12 +272,15 @@ export default function SignUp() {
               disabled={loading || !date}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400"
             >
-              {loading ? 'Creating account...' : 'Sign up'}
+              {loading ? "Creating account..." : "Sign up"}
             </button>
           </div>
 
           <div className="text-sm text-center">
-            <Link href="/auth/signin" className="font-medium text-indigo-600 hover:text-indigo-500">
+            <Link
+              href="/auth/signin"
+              className="font-medium text-indigo-600 hover:text-indigo-500"
+            >
               Already have an account? Sign in
             </Link>
           </div>
