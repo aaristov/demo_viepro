@@ -4,9 +4,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Health Survey App",
-  description: "A secure health survey application",
-};
+  title: 'ONE LIFE+ | AI-Powered Health Assessment',
+  description: 'ONE LIFE+ provides real-time global health audits and AI-assisted medical recommendations for healthcare professionals.',
+}
 
 export default function RootLayout({
   children,

@@ -213,7 +213,7 @@ La question doit être courte, positive, personnelle et faire référence aux so
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
           <Link 
-            href="/"
+            href="/dashboard"
             className="inline-flex items-center text-gray-600 hover:text-gray-900"
           >
             <div className="flex items-center gap-2 mb-4">

@@ -1,6 +1,7 @@
 'use client';
 
 import { signOut, useSession } from 'next-auth/react';
+import Link from 'next/link';
 
 export default function NavBar() {
   const { data: session } = useSession();
@@ -11,7 +12,9 @@ export default function NavBar() {
         <div className="flex justify-between h-16">
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
-              <span className="text-lg font-semibold">Health Survey App</span>
+              <span className="text-lg font-semibold">
+                <Link href="/">ONE LIFE+</Link>
+              </span>
             </div>
           </div>
           

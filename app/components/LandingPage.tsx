@@ -1,38 +1,29 @@
-import { Metadata } from 'next'
-import { Card, CardContent } from '@/components/ui/card'
-import { Heart, Activity, User2, Brain, Trophy, Timer } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import Link from 'next/link'
-import Image from 'next/image'
+import React from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Heart, Activity, User2, Brain, Trophy, Timer } from 'lucide-react';
 
-export const metadata: Metadata = {
-  title: 'ONE LIFE+ | AI-Powered Health Assessment',
-  description: 'ONE LIFE+ provides real-time global health audits and AI-assisted medical recommendations for healthcare professionals.',
-}
-
-export default function HomePage() {
+const LandingPage = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-dark-green via-green to-blue-100">
+    <div className="min-h-screen bg-gradient-to-b from-white via-green to-dark-green">
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-16">
         <div className="flex flex-col items-center text-center mb-16">
-          <div className="mb-8 relative w-48 h-80">
+          <div className="mb-8">
             <img 
-              src="/logo.svg"
-              alt="One Life+ Logo"
-              className="h-120"
+              src="/api/placeholder/200/80" 
+              alt="One Life+ Logo" 
+              className="h-20"
             />
           </div>
-          {/* <h1 className="text-4xl md:text-6xl font-bold text-blue-900 mb-4">
+          <h1 className="text-4xl md:text-6xl font-bold text-blue-900 mb-4">
             ONE LIFE+
-          </h1> */}
-          <p className="text-xl md:text-2xl text-blue-100 max-w-2xl">
+          </h1>
+          <p className="text-xl md:text-2xl text-blue-800 max-w-2xl">
             Real-time global health audit powered by AI
           </p>
         </div>
       </section>
 
-      {/* Rest of your component remains the same */}
       {/* Features Section */}
       <section className="container mx-auto px-4 py-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -109,34 +100,22 @@ export default function HomePage() {
           <p className="text-lg text-blue-800 mb-8">
             Join thousands of healthcare professionals already using ONE LIFE+
           </p>
-          <div className="flex gap-4 justify-center">
-            <Link href="/auth/signin">
-              <Button 
-                className="bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors"
-              >
-                Sign In
-              </Button>
-            </Link>
-            <Link href="/auth/signup">
-              <Button 
-                variant="outline"
-                className="px-8 py-3 rounded-lg text-lg font-semibold"
-              >
-                Register
-              </Button>
-            </Link>
-          </div>
+          <button className="bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors">
+            Get Started
+          </button>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-blue-100 backdrop-blur mt-16">
+      <footer className="bg-blue-900/50 backdrop-blur mt-16">
         <div className="container mx-auto px-4 py-8">
-          <div className="text-center text-blie-900">
+          <div className="text-center text-white">
             <p>&copy; 2025 ONE LIFE+. All rights reserved.</p>
           </div>
         </div>
       </footer>
     </div>
-  )
-}
+  );
+};
+
+export default LandingPage;
