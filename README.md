@@ -7,11 +7,20 @@ ONE LIFE+ is an AI-powered health assessment platform designed to help healthcar
 ## 🌟 Features
 
 - **Interactive Health Assessment Wheel**: Visual representation of a patient's health across multiple domains
+
+<img src="/public/wheel.png" alt="wheel" width="500"/>
+
 - **Patient-specific Data**: Secure storage and display of individual patient health data
 - **AI-powered Questionnaire**: Smart assessment tool that adapts based on patient responses
+
+<img src="/public/questionnaire.png" alt="QA" width="500"/>
+
 - **Authentication & Authorization**: Secure login system ensuring patients only see their own data
+
+![Login](public/login.png)
+
 - **Responsive UI**: Mobile-friendly interface built with Next.js and Tailwind CSS
-- **Data Visualization**: Clear graphical representation of health metrics
+- **Data Visualization**: TO BE DONE
 
 ## 🔧 Technology Stack
 
