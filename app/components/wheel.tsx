@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Heart, ChevronDown, ChevronUp, Star } from 'lucide-react';
 import type { NocoDBResponse, Sector, DomainMapData, CriteriaData } from '@/app/types/nocodb';
 
@@ -51,6 +52,7 @@ const getTimeAgo = (dateString: string | null): string => {
 
 const HealthWheel = () => {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [rotation, setRotation] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [startAngle, setStartAngle] = useState(0);
@@ -75,9 +77,10 @@ const HealthWheel = () => {
     }
   };
 
-  const fetchStarAverages = async (patientId: string) => {
+  const fetchStarAverages = async () => {
     try {
-      const response = await fetch(`/api/stars?patient_id=${patientId}`);
+      // This will automatically use the current user's ID from the session
+      const response = await fetch('/api/stars');
       if (!response.ok) throw new Error('Failed to fetch star averages');
       const data = await response.json();
       console.log('Star averages:', data); // Debug log
@@ -169,6 +172,11 @@ const HealthWheel = () => {
   };
 
   useEffect(() => {
+    // Don't load data if session is loading or not authenticated
+    if (status === 'loading' || status === 'unauthenticated') {
+      return;
+    }
+    
     const loadData = async () => {
       try {
         const data = await fetchNocoDBData();
@@ -206,8 +214,8 @@ const HealthWheel = () => {
         setSectors(newSectors);
         setLoading(false);
 
-        // Fetch star averages for patient ID 7
-        await fetchStarAverages('7');
+        // Fetch star averages for the current logged in user
+        await fetchStarAverages();
       } catch (error) {
         console.error('Error loading data:', error);
         setLoading(false);
@@ -215,7 +223,7 @@ const HealthWheel = () => {
     };
 
     loadData();
-  }, []);
+  }, [status]);
 
   useEffect(() => {
     let animationFrame: number;
@@ -241,10 +249,26 @@ const HealthWheel = () => {
     };
   }, [isDragging, velocity, lastTimestamp]);
 
-  if (loading) {
+  if (status === 'loading' || loading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-xl">Loading domains...</div>
+      </div>
+    );
+  }
+  
+  if (status === 'unauthenticated') {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-xl">
+          <p>Please sign in to view your health data</p>
+          <button 
+            onClick={() => router.push('/auth/signin')} 
+            className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Sign In
+          </button>
+        </div>
       </div>
     );
   }

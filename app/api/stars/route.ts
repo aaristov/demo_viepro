@@ -1,4 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../auth/[...nextauth]/route';
 
 const NOCODB_URL = process.env.NOCODB_BASE_URL;
 const NOCODB_API_KEY = process.env.NOCODB_API_TOKEN;
@@ -24,13 +26,31 @@ interface DomainData {
   lastUpdate: string | null;
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const patient_id = searchParams.get('patient_id');
+    // Get the user session to ensure we only return data for the authenticated user
+    const session = await getServerSession(authOptions);
+    
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
+    // Get the patient ID from the session
+    const patient_id = session.user.id;
+    
     if (!patient_id) {
-      return NextResponse.json({ error: 'Patient ID is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Patient ID not found in session' }, { status: 400 });
+    }
+    
+    // Allow admins to override patient_id with query param if needed
+    const { searchParams } = new URL(request.url);
+    const requestedPatientId = searchParams.get('patient_id');
+    
+    const isAdmin = session.user.role === 'ADMIN';
+    const effectivePatientId = isAdmin && requestedPatientId ? requestedPatientId : patient_id;
+    
+    if (!isAdmin && requestedPatientId && requestedPatientId !== patient_id) {
+      return NextResponse.json({ error: 'Not authorized to access other patient data' }, { status: 403 });
     }
 
     if (!NOCODB_URL || !NOCODB_API_KEY) {
@@ -38,7 +58,7 @@ export async function GET(request: Request) {
     }
 
     const response = await fetch(
-      `${NOCODB_URL}/api/v2/tables/mris3k8w3rdyzbb/records?where=(patient_id,eq,${patient_id})`,
+      `${NOCODB_URL}/api/v2/tables/mris3k8w3rdyzbb/records?where=(patient_id,eq,${effectivePatientId})`,
       {
         headers: {
           'xc-token': NOCODB_API_KEY,
