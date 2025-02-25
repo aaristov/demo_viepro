@@ -1,17 +1,27 @@
 # ONE LIFE+ Health Survey Application
 
-![ONE LIFE+ Logo](/public/logo.svg)
+<img src="/app/icon.svg" alt="logo" width="200"/>
 
 ONE LIFE+ is an AI-powered health assessment platform designed to help healthcare professionals conduct comprehensive health surveys and provide personalized care recommendations. Built during the Doctolib Hackathon, this application demonstrates how AI can enhance patient care and streamline the consultation process.
 
 ## 🌟 Features
 
 - **Interactive Health Assessment Wheel**: Visual representation of a patient's health across multiple domains
+
+<img src="/public/wheel.png" alt="wheel" width="500"/>
+
 - **Patient-specific Data**: Secure storage and display of individual patient health data
 - **AI-powered Questionnaire**: Smart assessment tool that adapts based on patient responses
+
+<img src="/public/questionnaire.png" alt="QA" width="500"/>
+
 - **Authentication & Authorization**: Secure login system ensuring patients only see their own data
+
+
+<img src="/public/login.png" alt="QA" width="500"/>
+
 - **Responsive UI**: Mobile-friendly interface built with Next.js and Tailwind CSS
-- **Data Visualization**: Clear graphical representation of health metrics
+- **Data Visualization**: TO BE DONE
 
 ## 🔧 Technology Stack
 

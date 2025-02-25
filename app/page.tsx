@@ -1,20 +1,57 @@
+'use client';
+
 import { Metadata } from 'next'
 import { Card, CardContent } from '@/components/ui/card'
 import { Heart, Activity, User2, Brain, Trophy, Timer } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import Image from 'next/image'
-
-export const metadata: Metadata = {
-  title: 'ONE LIFE+ | AI-Powered Health Assessment',
-  description: 'ONE LIFE+ provides real-time global health audits and AI-assisted medical recommendations for healthcare professionals.',
-}
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 
 export default function HomePage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   return (
     <div className="min-h-screen bg-gradient-to-b from-dark-green via-green to-blue-100">
+      {/* Navigation Bar */}
+      <nav className="bg-white/10 backdrop-blur-sm py-4">
+        <div className="container mx-auto px-4 flex justify-between items-center">
+          <Link href="/" className="flex items-center">
+            <img src="/logo-small.svg" alt="ONE LIFE+" className="h-8 mr-2" />
+            <span className="text-white text-lg font-semibold">ONE LIFE+</span>
+          </Link>
+          
+          <div>
+            {status === 'authenticated' ? (
+              <div className="flex items-center gap-4">
+                <Link href="/dashboard">
+                  <Button variant="ghost" className="text-white hover:text-blue-100">
+                    Dashboard
+                  </Button>
+                </Link>
+                <span className="text-white">|</span>
+                <span className="text-white">{session?.user?.name}</span>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Link href="/auth/signin">
+                  <Button variant="ghost" className="text-white hover:text-blue-100">
+                    Sign In
+                  </Button>
+                </Link>
+                <Link href="/auth/signup">
+                  <Button variant="outline" className="text-white border-white hover:bg-white/20">
+                    Register
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      </nav>
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-16">
+      <section className="container mx-auto px-4 py-12 mt-4">
         <div className="flex flex-col items-center text-center mb-16">
           <div className="mb-8 relative w-48 h-80">
             <img 
@@ -100,34 +137,56 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="container mx-auto px-4 py-16 text-center">
-        <div className="bg-white/90 backdrop-blur rounded-xl p-8 max-w-3xl mx-auto">
-          <h2 className="text-3xl font-bold text-blue-900 mb-4">
-            Start Your 14-Day Free Trial
-          </h2>
-          <p className="text-lg text-blue-800 mb-8">
-            Join thousands of healthcare professionals already using ONE LIFE+
-          </p>
-          <div className="flex gap-4 justify-center">
-            <Link href="/auth/signin">
-              <Button 
-                className="bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors"
-              >
-                Sign In
-              </Button>
-            </Link>
-            <Link href="/auth/signup">
-              <Button 
-                variant="outline"
-                className="px-8 py-3 rounded-lg text-lg font-semibold"
-              >
-                Register
-              </Button>
-            </Link>
+      {/* CTA Section - Only shown for unauthenticated users */}
+      {status !== 'authenticated' ? (
+        <section className="container mx-auto px-4 py-16 text-center">
+          <div className="bg-white/90 backdrop-blur rounded-xl p-8 max-w-3xl mx-auto">
+            <h2 className="text-3xl font-bold text-blue-900 mb-4">
+              Start Your 14-Day Free Trial
+            </h2>
+            <p className="text-lg text-blue-800 mb-8">
+              Join thousands of healthcare professionals already using ONE LIFE+
+            </p>
+            <div className="flex gap-4 justify-center">
+              <Link href="/auth/signin">
+                <Button 
+                  className="bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors"
+                >
+                  Sign In
+                </Button>
+              </Link>
+              <Link href="/auth/signup">
+                <Button 
+                  variant="outline"
+                  className="px-8 py-3 rounded-lg text-lg font-semibold"
+                >
+                  Register
+                </Button>
+              </Link>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : (
+        <section className="container mx-auto px-4 py-16 text-center">
+          <div className="bg-white/90 backdrop-blur rounded-xl p-8 max-w-3xl mx-auto">
+            <h2 className="text-3xl font-bold text-blue-900 mb-4">
+              Welcome Back, {session?.user?.name || 'Patient'}
+            </h2>
+            <p className="text-lg text-blue-800 mb-8">
+              Continue your health journey with ONE LIFE+
+            </p>
+            <div className="flex gap-4 justify-center">
+              <Link href="/dashboard">
+                <Button 
+                  className="bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors"
+                >
+                  Go to Dashboard
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Footer */}
       <footer className="bg-blue-100 backdrop-blur mt-16">
