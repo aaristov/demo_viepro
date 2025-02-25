@@ -69,7 +69,13 @@ export default function SignUp() {
   };
 
   const validatePassword = (password: string): boolean => {
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/;
+    // Updated regex:
+    // (?=.*[a-z]) - at least one lowercase letter
+    // (?=.*[A-Z]) - at least one uppercase letter
+    // (?=.*\d) - at least one number
+    // .{8,} - at least 8 characters long
+    // Special characters are now allowed implicitly
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
     return passwordRegex.test(password);
   };
 
