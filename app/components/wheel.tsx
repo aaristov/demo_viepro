@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Heart, ChevronDown, ChevronUp, Star } from 'lucide-react';
 import type { NocoDBResponse, Sector, DomainMapData, CriteriaData } from '@/app/types/nocodb';
+import StarHistoryBarplot from './star-history/barplot';
 
 const colorsList = [
   "#FFB5E8", "#B5EAEA", "#97C1A9", "#FCB5AC", "#BDB2FF", "#FFE5B5",
@@ -61,9 +62,11 @@ const HealthWheel = () => {
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSector, setSelectedSector] = useState<number | null>(null);
+  const [hoveredSector, setHoveredSector] = useState<number | null>(null);
   const [expandedCriteria, setExpandedCriteria] = useState<string[]>([]);
   const [domainAverages, setDomainAverages] = useState<DomainAverages>({});
   const wheelRef = useRef<HTMLDivElement>(null);
+  const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const fetchNocoDBData = async (): Promise<NocoDBResponse> => {
     try {
@@ -101,35 +104,81 @@ const HealthWheel = () => {
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!wheelRef.current) return;
     const rect = wheelRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left - rect.width;
+    const x = e.clientX - rect.left - rect.width / 2;
     const y = e.clientY - rect.top - rect.height / 2;
     setStartAngle(Math.atan2(y, x) - rotation);
     setIsDragging(true);
     setVelocity(0);
+    setHoveredSector(null);
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (!wheelRef.current) return;
     const touch = e.touches[0];
     const rect = wheelRef.current.getBoundingClientRect();
-    const x = touch.clientX - rect.left - rect.width;
+    const x = touch.clientX - rect.left - rect.width / 2;
     const y = touch.clientY - rect.top - rect.height / 2;
     setStartAngle(Math.atan2(y, x) - rotation);
     setIsDragging(true);
     setVelocity(0);
+    setHoveredSector(null);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || !wheelRef.current) return;
-    
-    const rect = wheelRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left - rect.width;
-    const y = e.clientY - rect.top - rect.height / 2;
-    const angle = Math.atan2(y, x);
-    const newRotation = angle - startAngle;
-    
-    setVelocity((newRotation - rotation) / 16);
-    setRotation(newRotation);
+    if (isDragging && wheelRef.current) {
+      const rect = wheelRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left - rect.width / 2;
+      const y = e.clientY - rect.top - rect.height / 2;
+      const angle = Math.atan2(y, x);
+      const newRotation = angle - startAngle;
+      
+      setVelocity((newRotation - rotation) / 16);
+      setRotation(newRotation);
+      setHoveredSector(null);
+    } else if (wheelRef.current && !isDragging) {
+      // Handle hover detection when not dragging
+      const rect = wheelRef.current.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const mouseX = e.clientX - centerX;
+      const mouseY = e.clientY - centerY;
+      
+      // Calculate angle relative to center
+      let angle = Math.atan2(mouseY, mouseX) - rotation;
+      // Normalize angle to 0-2π range
+      angle = (angle + 2 * Math.PI) % (2 * Math.PI);
+      
+      // Calculate which sector this angle corresponds to
+      const sectorAngle = (2 * Math.PI) / sectors.length;
+      const sectorIndex = Math.floor(angle / sectorAngle);
+      
+      // Check distance from center to ensure we're actually over the wheel
+      const distance = Math.sqrt(mouseX * mouseX + mouseY * mouseY);
+      if (distance < 300 && distance > 50) {
+        if (hoveredSector !== sectorIndex) {
+          // Clear existing timeout if there is one
+          if (tooltipTimeoutRef.current) {
+            clearTimeout(tooltipTimeoutRef.current);
+          }
+          
+          // Set a small delay before showing tooltip to prevent flickering
+          tooltipTimeoutRef.current = setTimeout(() => {
+            setHoveredSector(sectorIndex);
+          }, 200);
+        }
+      } else {
+        // Clear timeout if mouse moved away quickly
+        if (tooltipTimeoutRef.current) {
+          clearTimeout(tooltipTimeoutRef.current);
+          tooltipTimeoutRef.current = null;
+        }
+        
+        // Add small delay before hiding tooltip to prevent flickering
+        tooltipTimeoutRef.current = setTimeout(() => {
+          setHoveredSector(null);
+        }, 200);
+      }
+    }
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -138,7 +187,7 @@ const HealthWheel = () => {
     
     const touch = e.touches[0];
     const rect = wheelRef.current.getBoundingClientRect();
-    const x = touch.clientX - rect.left - rect.width;
+    const x = touch.clientX - rect.left - rect.width / 2;
     const y = touch.clientY - rect.top - rect.height / 2;
     const angle = Math.atan2(y, x);
     const newRotation = angle - startAngle;
@@ -150,6 +199,21 @@ const HealthWheel = () => {
   const handleMouseUp = () => {
     setIsDragging(false);
     setLastTimestamp(performance.now());
+  };
+
+  const handleMouseLeave = () => {
+    // Clear any pending timeouts
+    if (tooltipTimeoutRef.current) {
+      clearTimeout(tooltipTimeoutRef.current);
+      tooltipTimeoutRef.current = null;
+    }
+    
+    // Add a small delay before hiding to prevent flickering if mouse briefly leaves the wheel
+    tooltipTimeoutRef.current = setTimeout(() => {
+      setHoveredSector(null);
+    }, 200);
+    
+    setIsDragging(false);
   };
 
   const handleSectorClick = (index: number) => {
@@ -170,6 +234,15 @@ const HealthWheel = () => {
       }, 1000);
     }
   };
+
+  // Clean up timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (tooltipTimeoutRef.current) {
+        clearTimeout(tooltipTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     // Don't load data if session is loading or not authenticated
@@ -282,11 +355,11 @@ const HealthWheel = () => {
       
       <div 
         ref={wheelRef}
-        className="absolute left-0 top-1/2 -translate-y-1/2 touch-none"
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 touch-none"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleMouseUp}
@@ -306,7 +379,11 @@ const HealthWheel = () => {
               const domainData = domainAverages[sector.text] || { average: 'NA', lastUpdate: null };
               
               return (
-                <g key={index} onClick={() => handleSectorClick(index)} style={{ cursor: 'pointer' }}>
+                <g 
+                  key={index} 
+                  onClick={() => handleSectorClick(index)} 
+                  style={{ cursor: 'pointer' }}
+                >
                   <path
                     d={`M 0 0 L ${startX} ${startY} A 300 300 0 0 1 ${endX} ${endY} Z`}
                     fill={sector.color}
@@ -349,9 +426,27 @@ const HealthWheel = () => {
         </svg>
       </div>
       
+      {/* Star History Barplot Tooltip */}
+      {hoveredSector !== null && sectors[hoveredSector] && (
+        <div 
+          className="absolute left-1/2 top-1/2 transform -translate-x-1/2 translate-y-16 z-10"
+          style={{ 
+            width: '500px',
+            maxWidth: '90vw'
+          }}
+        >
+          <StarHistoryBarplot 
+            domain={sectors[hoveredSector].text} 
+            isVisible={true} 
+            className="transition-opacity duration-300"
+          />
+        </div>
+      )}
+      
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-center text-gray-600">
         <p>Click on a sector to start the survey!</p>
         <p className="text-sm mt-2">Stars show your average rating for each domain</p>
+        <p className="text-sm italic">Hover over a sector to see your rating history</p>
       </div>
     </div>
   );
