@@ -29,6 +29,7 @@ ONE LIFE+ is an AI-powered health assessment platform designed to help healthcar
 - **Authentication**: NextAuth.js with credential provider
 - **State Management**: Zustand
 - **Database**: NocoDB (used as backend database service)
+![db](public/db.png)
 - **Styling**: Tailwind CSS with custom theme
 
 ## 📋 Project Structure
